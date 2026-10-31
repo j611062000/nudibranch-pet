@@ -2,7 +2,7 @@ import Foundation
 
 /// A gentle companion: needs stop falling at 20, and there is no death state.
 public struct PetState: Codable, Equatable {
-  public var name = "小紫"
+  public var name = "Nudi"
   public var fullness: Double = 80
   public var happiness: Double = 85
   public var energy: Double = 90
@@ -20,6 +20,8 @@ public struct PetState: Codable, Equatable {
     // A backward clock change must not grant energy or subtract needs.
     guard elapsed >= 0 else {
       lastUpdated = now
+      lastFed = lastFed.map { min($0, now) }
+      lastPetted = lastPetted.map { min($0, now) }
       return
     }
     let hours = min(elapsed, 24 * 60 * 60) / 3600
@@ -53,11 +55,11 @@ public struct PetState: Codable, Equatable {
     isSleeping.toggle()
   }
 
-  public var mood: String {
-    if isSleeping { return "正在做海底的夢" }
-    if fullness < 40 { return "想吃一點小點心" }
-    if energy < 40 { return "有一點睏了" }
-    if happiness < 40 { return "想跟你待在一起" }
-    return "今天也慢慢來就好"
+  public var mood: Copy {
+    if isSleeping { return .dreaming }
+    if fullness < 40 { return .hungry }
+    if energy < 40 { return .sleepy }
+    if happiness < 40 { return .lonely }
+    return .content
   }
 }

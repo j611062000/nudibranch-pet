@@ -1,111 +1,123 @@
 import AppKit
+import PetCore
 import SwiftUI
 
 struct PetView: View {
   @ObservedObject var store: PetStore
+  @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
   var body: some View {
-    VStack(spacing: 0) {
-      HStack(alignment: .center) {
+    VStack(alignment: .leading, spacing: 18) {
+      HStack {
         VStack(alignment: .leading, spacing: 5) {
-          Text("NUDI / 海蛞蝓日常")
-            .font(.system(size: 9, weight: .semibold, design: .monospaced))
-            .tracking(2).foregroundStyle(OceanStyle.mint)
-          Text("一小片海，陪你工作。")
-            .font(.system(size: 19, weight: .medium, design: .rounded))
-            .foregroundStyle(OceanStyle.cream)
+          Text("NUDI").font(.system(size: 11, weight: .bold, design: .monospaced)).tracking(4)
+          Text(store.text(.subtitle)).font(.system(size: 13)).foregroundStyle(.secondary)
         }
         Spacer()
-        Menu {
-          Toggle("減少動畫", isOn: $store.quietAnimation)
-          Divider()
-          Text("狀態自動儲存在這台 Mac")
-          Text("Nudi · 本機原型 0.1.0")
-          Divider()
-          Button("結束 Nudi") { NSApplication.shared.terminate(nil) }
-            .keyboardShortcut("q")
-        } label: {
-          Image(systemName: "ellipsis").font(.system(size: 18))
-            .foregroundStyle(OceanStyle.cream.opacity(0.7))
-            .frame(width: 28, height: 28)
-        }
-        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-        .accessibilityLabel("設定與結束")
+        Image(systemName: "water.waves").font(.system(size: 20, weight: .ultraLight)).foregroundStyle(.secondary)
       }
-      .padding(.bottom, 20)
 
-      Aquarium(store: store)
+      ZStack {
+        RoundedRectangle(cornerRadius: 22).fill(.white.opacity(0.045))
+        TimelineView(.animation(minimumInterval: 1.0 / 12, paused: !store.isVisible || store.quietAnimation || systemReduceMotion || store.state.isSleeping)) { timeline in
+          let phase = store.quietAnimation || systemReduceMotion ? 1 : timeline.date.timeIntervalSinceReferenceDate
+          Image(nsImage: SlugDrawing.image(size: NSSize(width: 190, height: 124), phase: phase, sleeping: store.state.isSleeping))
+            .renderingMode(.template).foregroundStyle(.white)
+            .accessibilityLabel(store.text(store.state.isSleeping ? .sleepingPet : .awakePet))
+        }
+        VStack {
+          HStack {
+            Text(store.text(store.state.isSleeping ? .resting : .wandering))
+              .font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundStyle(.secondary)
+            Spacer()
+            Image(systemName: store.state.isSleeping ? "moon" : "circle.fill")
+              .font(.system(size: store.state.isSleeping ? 11 : 5)).foregroundStyle(.secondary)
+          }
+          Spacer()
+        }.padding(15)
+        if let symbol = store.reaction {
+          Image(systemName: symbol).font(.system(size: 18)).offset(x: -70, y: -45).accessibilityHidden(true)
+        }
+        if store.state.isSleeping {
+          Text("z z Z").font(.system(size: 14, weight: .light, design: .rounded))
+            .foregroundStyle(.secondary).offset(x: -65, y: -43).accessibilityHidden(true)
+        }
+      }.frame(height: 172)
 
-      HStack(alignment: .firstTextBaseline, spacing: 8) {
-        Text(store.state.name).font(.system(size: 22, weight: .semibold, design: .rounded))
-          .foregroundStyle(OceanStyle.cream)
-        Text("你的海蛞蝓朋友").font(.system(size: 10)).foregroundStyle(OceanStyle.cream.opacity(0.45))
-        Spacer()
-        Text(store.state.isSleeping ? "晚安 ☾" : "陪伴中")
-          .font(.system(size: 10, weight: .medium)).foregroundStyle(OceanStyle.mint)
-          .padding(.horizontal, 10).padding(.vertical, 5)
-          .background(OceanStyle.mint.opacity(0.08), in: Capsule())
-      }.padding(.top, 19)
-
-      Text(store.message ?? store.state.mood)
-        .font(.system(size: 12)).foregroundStyle(OceanStyle.cream.opacity(0.68))
-        .frame(maxWidth: .infinity, alignment: .leading).frame(height: 29, alignment: .topLeading)
-        .padding(.top, 5)
-        .accessibilityAddTraits(.updatesFrequently)
+      VStack(alignment: .leading, spacing: 7) {
+        HStack(alignment: .firstTextBaseline) {
+          Text("Nudi").font(.system(size: 23, weight: .semibold, design: .rounded))
+          Text(store.text(.companion)).font(.system(size: 11)).foregroundStyle(.secondary)
+        }
+        Text(store.text(store.message ?? store.state.mood))
+          .font(.system(size: 12)).foregroundStyle(.secondary)
+          .frame(height: 30, alignment: .topLeading).fixedSize(horizontal: false, vertical: true)
+      }
 
       HStack(spacing: 18) {
-        meter("飽足", value: store.state.fullness, color: OceanStyle.mint)
-        meter("心情", value: store.state.happiness, color: OceanStyle.lavender)
-        meter("精神", value: store.state.energy, color: Color(red: 0.91, green: 0.79, blue: 0.56))
-      }.padding(.bottom, 19)
-
-      HStack(spacing: 10) {
-        action("餵食", symbol: "sparkles", disabled: store.state.isSleeping, perform: store.feed)
-        action("摸摸", symbol: "heart", disabled: store.state.isSleeping, perform: store.pet)
-        action(store.state.isSleeping ? "起床" : "睡覺", symbol: store.state.isSleeping ? "sun.max" : "moon", perform: store.toggleSleep)
+        meter(.fullness, value: store.state.fullness)
+        meter(.happiness, value: store.state.happiness)
+        meter(.energy, value: store.state.energy)
       }
-
-      HStack(spacing: 5) {
-        Image(systemName: "leaf").font(.system(size: 9))
-        Text("不用趕，跟牠一起慢慢來。")
-          .font(.system(size: 10))
-      }.foregroundStyle(OceanStyle.cream.opacity(0.35)).padding(.top, 18)
+      HStack(spacing: 9) {
+        action(.feed, symbol: "sparkles", disabled: store.state.isSleeping, perform: store.feed)
+        action(.pet, symbol: "heart", disabled: store.state.isSleeping, perform: store.pet)
+        action(store.state.isSleeping ? .wake : .sleep, symbol: store.state.isSleeping ? "sun.max" : "moon", perform: store.toggleSleep)
+      }
+      Divider().overlay(.white.opacity(0.05))
+      HStack {
+        Text(store.text(.language)).font(.system(size: 11)).foregroundStyle(.secondary)
+        Spacer()
+        Picker(store.text(.language), selection: $store.language) {
+          Text("English").tag(AppLanguage.english)
+          Text("繁體中文").tag(AppLanguage.traditionalChinese)
+        }.labelsHidden().pickerStyle(.segmented).frame(width: 180)
+      }
+      Toggle(store.text(.reduceMotion), isOn: $store.quietAnimation)
+        .font(.system(size: 11)).toggleStyle(.switch).controlSize(.mini)
+        .help(store.text(.motionHelp))
+      HStack {
+        Text(store.text(.localOnly)).font(.system(size: 9)).foregroundStyle(.tertiary)
+        Spacer(minLength: 4)
+        Button(store.text(.quit)) { NSApp.terminate(nil) }
+          .font(.system(size: 10)).buttonStyle(.plain).foregroundStyle(.secondary)
+          .keyboardShortcut("q")
+      }
     }
-    .padding(22)
-    .frame(width: 364)
-    .background(OceanStyle.ink)
+    .padding(22).frame(width: 356)
+    .background(Color(white: 0.095)).foregroundStyle(.white)
     .preferredColorScheme(.dark)
   }
 
-  private func meter(_ title: String, value: Double, color: Color) -> some View {
+  private func meter(_ key: Copy, value: Double) -> some View {
     VStack(spacing: 7) {
       HStack {
-        Text(title).font(.system(size: 10))
+        Text(store.text(key)).font(.system(size: 10))
         Spacer()
         Text("\(Int(value.rounded()))").font(.system(size: 10, design: .monospaced))
-      }.foregroundStyle(OceanStyle.cream.opacity(0.55))
+      }.foregroundStyle(.secondary)
       GeometryReader { geometry in
         Capsule().fill(.white.opacity(0.08))
-        Capsule().fill(color.opacity(0.85)).frame(width: geometry.size.width * min(1, max(0, value / 100)))
-      }.frame(height: 4)
+        Capsule().fill(.white.opacity(0.75)).frame(width: geometry.size.width * min(1, max(0, value / 100)))
+      }.frame(height: 3)
     }
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(title).accessibilityValue("\(Int(value.rounded())) / 100")
+    .accessibilityLabel(store.text(key)).accessibilityValue("\(Int(value.rounded())) / 100")
   }
 
-  private func action(_ title: String, symbol: String, disabled: Bool = false, perform: @escaping () -> Void) -> some View {
+  private func action(_ key: Copy, symbol: String, disabled: Bool = false, perform: @escaping () -> Void) -> some View {
     Button(action: perform) {
-      HStack(spacing: 7) {
-        Image(systemName: symbol).font(.system(size: 13))
-        Text(title).font(.system(size: 12, weight: .medium))
+      HStack(spacing: 6) {
+        Image(systemName: symbol).font(.system(size: 12))
+        Text(store.text(key)).font(.system(size: 12, weight: .medium))
       }
-      .frame(maxWidth: .infinity).frame(height: 42)
-      .foregroundStyle(disabled ? OceanStyle.cream.opacity(0.25) : OceanStyle.cream)
-      .background(.white.opacity(disabled ? 0.025 : 0.065), in: RoundedRectangle(cornerRadius: 12))
-      .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.06)))
-      .contentShape(RoundedRectangle(cornerRadius: 12))
+      .frame(maxWidth: .infinity).frame(height: 40)
+      .foregroundStyle(.white.opacity(disabled ? 0.25 : 0.9))
+      .background(.white.opacity(disabled ? 0.025 : 0.07), in: RoundedRectangle(cornerRadius: 11))
+      .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(.white.opacity(0.06)))
+      .contentShape(RoundedRectangle(cornerRadius: 11))
     }
     .buttonStyle(.plain).disabled(disabled)
-    .help(disabled ? "先讓小紫起床吧" : title)
+    .help(store.text(disabled ? .wakeFirst : key))
   }
 }
