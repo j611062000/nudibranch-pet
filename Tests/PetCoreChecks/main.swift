@@ -65,4 +65,22 @@ for copy in Copy.allCases {
   expect(!copy.text(.english).isEmpty && !copy.text(.traditionalChinese).isEmpty, "Both translations exist")
   expect(copy.text(.english) != copy.text(.traditionalChinese), "Translations are distinct")
 }
-print("PASS: \(checks) checks (pet state, persistence, bounded motion, clock changes, bilingual copy)")
+for activity in PetActivity.allCases {
+  var pausedCrawl = CrawlState()
+  let initial = pausedCrawl.x
+  for _ in 0..<60 { pausedCrawl.step(seconds: 0.1, paused: activity.pausesWalking) }
+  expect(activity == .wandering ? pausedCrawl.x != initial : pausedCrawl.x == initial, "Only wandering changes position")
+}
+for activity in [PetActivity.feeding, .petted] {
+  let reaction = PetReaction(activity: activity, startedAt: 100)
+  expect(reaction.isActive(at: 100), "Accepted reaction starts immediately")
+  expect(reaction.isActive(at: 100 + activity.reactionDuration - 0.01), "Reaction lasts its full duration")
+  expect(!reaction.isActive(at: 100 + activity.reactionDuration), "Reaction ends on time")
+  expect(reaction.elapsed(at: 99) == 0, "Reaction phase cannot go negative")
+}
+for petX in stride(from: CrawlState.inset, through: CrawlState.areaWidth - CrawlState.petWidth - CrawlState.inset, by: 0.25) {
+  let badgeX = PetActivity.badgeX(petX: petX)
+  expect(badgeX >= 0 && badgeX + 8 <= CrawlState.areaWidth, "Reaction badge stays within menu item")
+  expect(badgeX + 8 <= petX || badgeX >= petX + CrawlState.petWidth, "Reaction badge does not overlap the pet")
+}
+print("PASS: \(checks) checks (state, persistence, motion, bilingual copy, reaction timing and bounds)")

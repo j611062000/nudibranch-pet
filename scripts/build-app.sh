@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.."
 
 export CLANG_MODULE_CACHE_PATH="$PWD/.build/ModuleCache"
 export SWIFTPM_MODULECACHE_OVERRIDE="$PWD/.build/ModuleCache"
-version="0.1.0"
+version="0.2.0"
 options=(--disable-sandbox --cache-path .build/cache --scratch-path .build -c release --product Nudi)
 label="$(uname -m)"
 if [[ "${1:-}" == "--universal" ]]; then
@@ -29,7 +29,7 @@ cat > "$app/Contents/Info.plist" <<EOF
   <key>CFBundleDisplayName</key><string>Nudi</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$version</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleVersion</key><string>2</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleDevelopmentRegion</key><string>en</string>
   <key>CFBundleLocalizations</key><array><string>en</string><string>zh-Hant</string></array>

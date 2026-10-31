@@ -20,7 +20,8 @@ Apple's [statusItem(withLength:) documentation](https://developer.apple.com/docu
 
 - Crawl: slow movement with subtle body stretching and feeler motion.
 - Turn: reverse direction at the boundary.
-- Rest: settle down, close the eyes, and stop moving.
+- Rest: settle down, close the eyes, stop walking, and breathe gently with a Z badge.
+- Feed/pet: pause walking for four/three seconds respectively, animate the matching pose and snack/heart badge, then resume. Failed cooldown actions do not restart or cancel the current reaction.
 - Click: open controls for feeding, petting, sleeping, and quitting the app.
 - Respect the system's Reduce Motion setting and offer a static mode.
 - Stop the companion panel's scene animation when it closes; measure and tune the menu bar update rate.

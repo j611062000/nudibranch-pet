@@ -1,3 +1,15 @@
+# v0.2.0 interaction animations / 選單列互動動畫
+
+Date: 2026-10-31. Same Apple Silicon environment as v0.1.0 below.
+
+- `./scripts/check.sh`: **PASS**, 10,621 assertions, including reaction duration, paused walking during every interaction, and reaction-badge bounds/non-overlap across the full travel area.
+- Feed: four seconds of chewing and a snack badge; Pet: three seconds of happy motion with a heart. Sleep: closed eyes, a lower pose, gentle breathing, and a floating Z at a reduced 2 fps update rate.
+- The system/app Reduce Motion preference freezes the pose and badge while reaction expiry still returns the pet to its normal static state. Screen sleep stops the animation timer.
+- Failed/cooldown interactions update the message without cancelling an already-playing reaction. Sleeping cancels transient reactions.
+- The panel and menu bar share the same activity and drawing code; activity labels and accessibility text are bilingual.
+- README GIF: 368 frames at 960 × 270, infinite loop, 47.84 seconds after GIF delay rounding. Feeding, heart, and sleeping samples were visually inspected; read-back verified changing pixels.
+- Universal build and ad-hoc signing passed. The same notarization, older macOS, Intel runtime, and wider desktop-scenario limitations from v0.1.0 apply.
+
 # v0.1.0 verification / 驗證紀錄
 
 Date: 2026-10-31. Environment: macOS 27.0.1, Apple Silicon, Swift 6.4 Command Line Tools.

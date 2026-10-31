@@ -11,7 +11,7 @@ public enum AppLanguage: String, CaseIterable {
 
 public enum Copy: CaseIterable {
   case subtitle, companion, resting, wandering, feed, pet, sleep, wake
-  case fullness, happiness, energy, language, reduceMotion, quit, localOnly
+  case fullness, happiness, energy, language, reduceMotion, quit, localOnly, munching, feelingLoved
   case slowDown, dreaming, hungry, sleepy, lonely, content
   case fed, chewing, loved, alreadyLoved, letSleep, goodNight, goodMorning
   case settings, openPet, sleepingPet, awakePet, wakeFirst, motionHelp
@@ -23,6 +23,8 @@ public enum Copy: CaseIterable {
     case .companion: pair = ("Your little sea slug", "你的海蛞蝓朋友")
     case .resting: pair = ("Resting", "休息中")
     case .wandering: pair = ("Wandering", "散步中")
+    case .munching: pair = ("Munching", "吃點心中")
+    case .feelingLoved: pair = ("Feeling loved", "開心撒嬌中")
     case .feed: pair = ("Feed", "餵食")
     case .pet: pair = ("Pet", "摸摸")
     case .sleep: pair = ("Sleep", "睡覺")

@@ -15,14 +15,21 @@ enum DemoRenderer {
     let size = NSSize(width: 960, height: 270)
     var crawl = CrawlState()
     let initialX = crawl.x
-    var states: [CrawlState] = []
+    var states: [(crawl: CrawlState, activity: PetActivity, phase: Double)] = []
     var turns = 0
     repeat {
-      states.append(crawl)
+      states.append((crawl, .wandering, crawl.phase))
       let direction = crawl.facingRight
       crawl.step(seconds: 0.125)
       if direction != crawl.facingRight { turns += 1 }
     } while !(turns >= 2 && crawl.facingRight && crawl.x >= initialX) && states.count < 400
+
+    for activity in [PetActivity.feeding, .petted, .sleeping] {
+      let duration = activity == .sleeping ? 4 : activity.reactionDuration
+      for frame in 0..<Int(duration * 8) {
+        states.append((crawl, activity, Double(frame) / 8))
+      }
+    }
 
     guard let destination = CGImageDestinationCreateWithURL(output as CFURL, UTType.gif.identifier as CFString, states.count, nil) else {
       throw NSError(domain: "NudiDemo", code: 1)
@@ -41,14 +48,21 @@ enum DemoRenderer {
           text("Finder", at: CGPoint(x: 48, y: 109), size: 14, weight: .semibold)
           text("File     Edit     View", at: CGPoint(x: 110, y: 109), size: 14)
 
-          let pet = SlugDrawing.image(size: NSSize(width: 100, height: 18), phase: state.phase,
-                                     facingRight: state.facingRight, x: state.x)
+          let pet = SlugDrawing.image(size: NSSize(width: 100, height: 18), phase: state.phase, activity: state.activity,
+                                     facingRight: state.crawl.facingRight, x: state.crawl.x)
           tint(pet).draw(in: NSRect(x: 487, y: 100, width: 200, height: 36))
           symbol("wifi", in: NSRect(x: 746, y: 105, width: 25, height: 25))
           symbol("battery.100", in: NSRect(x: 794, y: 104, width: 35, height: 26))
           text("9:41", at: CGPoint(x: 860, y: 109), size: 14, weight: .medium)
 
-          text("Slow steps. Tiny naps. A softer workday.", at: CGPoint(x: 42, y: 39), size: 13, color: NSColor(white: 0.48, alpha: 1))
+          let caption: String
+          switch state.activity {
+          case .wandering: caption = "Slow steps. Tiny naps. A softer workday."
+          case .feeding: caption = "Feed / 餵食 — a little snack, a little munch."
+          case .petted: caption = "Pet / 摸摸 — a happy wiggle and a little love."
+          case .sleeping: caption = "Sleep / 睡覺 — soft breaths and tiny Zs."
+          }
+          text(caption, at: CGPoint(x: 42, y: 39), size: 13, color: NSColor(white: 0.48, alpha: 1))
           text("English / 繁體中文", at: CGPoint(x: 778, y: 39), size: 12, color: NSColor(white: 0.48, alpha: 1))
           return true
         }

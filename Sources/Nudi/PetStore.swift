@@ -6,7 +6,7 @@ import PetCore
 final class PetStore: ObservableObject {
   @Published private(set) var state: PetState
   @Published var message: Copy?
-  @Published var reaction: String?
+  @Published private(set) var reaction: PetReaction?
   @Published var isVisible = false
   @Published var language: AppLanguage {
     didSet { defaults.set(language.rawValue, forKey: "language") }
@@ -18,6 +18,7 @@ final class PetStore: ObservableObject {
   private let defaults: UserDefaults
   private var timer: Timer?
   private var reactionTask: Task<Void, Never>?
+  private var messageTask: Task<Void, Never>?
   private let stateKey = "petState.v1"
 
   init(defaults: UserDefaults = .standard) {
@@ -45,38 +46,68 @@ final class PetStore: ObservableObject {
 
   func feed() {
     if state.feed() {
-      respond(.fed, symbol: "sparkles")
+      respond(.fed)
+      play(.feeding)
     } else {
-      respond(state.isSleeping ? .letSleep : .chewing, symbol: nil)
+      respond(state.isSleeping ? .letSleep : .chewing)
     }
     save()
   }
 
   func pet() {
     if state.pet() {
-      respond(.loved, symbol: "heart.fill")
+      respond(.loved)
+      play(.petted)
     } else {
-      respond(state.isSleeping ? .letSleep : .alreadyLoved, symbol: nil)
+      respond(state.isSleeping ? .letSleep : .alreadyLoved)
     }
     save()
   }
 
   func toggleSleep() {
+    reactionTask?.cancel()
+    reaction = nil
     state.toggleSleep()
-    respond(state.isSleeping ? .goodNight : .goodMorning, symbol: nil)
+    respond(state.isSleeping ? .goodNight : .goodMorning)
     save()
   }
 
   func text(_ key: Copy) -> String { key.text(language) }
 
-  private func respond(_ text: Copy, symbol: String?) {
+  var activity: PetActivity {
+    if state.isSleeping { return .sleeping }
+    guard let reaction, reaction.isActive(at: ProcessInfo.processInfo.systemUptime) else { return .wandering }
+    return reaction.activity
+  }
+
+  func animationPhase(at uptime: TimeInterval) -> Double {
+    reaction?.elapsed(at: uptime) ?? uptime
+  }
+
+  var activityLabel: Copy {
+    switch activity {
+    case .wandering: return .wandering
+    case .feeding: return .munching
+    case .petted: return .feelingLoved
+    case .sleeping: return .resting
+    }
+  }
+
+  private func play(_ activity: PetActivity) {
     reactionTask?.cancel()
-    message = text
-    reaction = symbol
+    reaction = PetReaction(activity: activity, startedAt: ProcessInfo.processInfo.systemUptime)
     reactionTask = Task { [weak self] in
+      do { try await Task.sleep(for: .seconds(activity.reactionDuration)) } catch { return }
+      self?.reaction = nil
+    }
+  }
+
+  private func respond(_ text: Copy) {
+    messageTask?.cancel()
+    message = text
+    messageTask = Task { [weak self] in
       do { try await Task.sleep(for: .seconds(3)) } catch { return }
       self?.message = nil
-      self?.reaction = nil
     }
   }
 

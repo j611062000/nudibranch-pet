@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
   private var statusItem: NSStatusItem!
   private var crawl = CrawlState()
   private var animationTimer: Timer?
+  private var animationInterval: TimeInterval?
   private var lastFrame = ProcessInfo.processInfo.systemUptime
   private var subscriptions = Set<AnyCancellable>()
   private var screenAwake = true
@@ -71,7 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     popover.delegate = self
     popover.contentViewController = NSHostingController(rootView: PetView(store: store))
 
-    store.$state.combineLatest(store.$quietAnimation, store.$language)
+    store.$state.combineLatest(store.$quietAnimation, store.$language, store.$reaction)
       .receive(on: RunLoop.main)
       .sink { [weak self] _ in self?.refresh() }
       .store(in: &subscriptions)
@@ -135,18 +136,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
   @objc private func accessibilityChanged() { refresh() }
 
   private var shouldAnimate: Bool {
-    screenAwake && !store.state.isSleeping && !store.quietAnimation
+    screenAwake && !store.quietAnimation
       && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
   }
 
   private func refresh() {
     guard let button = statusItem?.button else { return }
-    button.toolTip = store.text(.openPet)
-    button.setAccessibilityLabel(store.text(.openPet))
+    button.toolTip = store.text(.openPet) + " · " + store.text(store.activityLabel)
+    button.setAccessibilityLabel(button.toolTip)
     drawFrame()
-    if shouldAnimate && animationTimer == nil {
+    let interval: TimeInterval = store.state.isSleeping ? 0.5 : 0.1
+    if shouldAnimate && (animationTimer == nil || animationInterval != interval) {
+      animationTimer?.invalidate()
+      animationInterval = interval
       lastFrame = ProcessInfo.processInfo.systemUptime
-      let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+      let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
         MainActor.assumeIsolated { self?.animate() }
       }
       timer.tolerance = 0.025
@@ -155,6 +159,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     } else if !shouldAnimate {
       animationTimer?.invalidate()
       animationTimer = nil
+      animationInterval = nil
     }
   }
 
@@ -163,14 +168,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     let elapsed = now - lastFrame
     lastFrame = now
     guard statusItem.button?.window?.isVisible == true else { return }
-    crawl.step(seconds: elapsed)
+    crawl.step(seconds: elapsed, paused: store.activity.pausesWalking)
     drawFrame()
   }
 
   private func drawFrame() {
     statusItem.button?.image = SlugDrawing.image(
       size: NSSize(width: CrawlState.areaWidth, height: 18),
-      phase: shouldAnimate ? crawl.phase : 1,
-      sleeping: store.state.isSleeping, facingRight: crawl.facingRight, x: crawl.x)
+      phase: shouldAnimate ? store.animationPhase(at: ProcessInfo.processInfo.systemUptime) : 1,
+      activity: store.activity, facingRight: crawl.facingRight, x: crawl.x)
   }
 }

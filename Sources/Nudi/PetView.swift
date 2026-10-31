@@ -19,15 +19,15 @@ struct PetView: View {
 
       ZStack {
         RoundedRectangle(cornerRadius: 22).fill(.white.opacity(0.045))
-        TimelineView(.animation(minimumInterval: 1.0 / 12, paused: !store.isVisible || store.quietAnimation || systemReduceMotion || store.state.isSleeping)) { timeline in
-          let phase = store.quietAnimation || systemReduceMotion ? 1 : timeline.date.timeIntervalSinceReferenceDate
-          Image(nsImage: SlugDrawing.image(size: NSSize(width: 190, height: 124), phase: phase, sleeping: store.state.isSleeping))
+        TimelineView(.animation(minimumInterval: store.state.isSleeping ? 0.5 : 1.0 / 12, paused: !store.isVisible || store.quietAnimation || systemReduceMotion)) { _ in
+          let phase = store.quietAnimation || systemReduceMotion ? 1 : store.animationPhase(at: ProcessInfo.processInfo.systemUptime)
+          Image(nsImage: SlugDrawing.image(size: NSSize(width: 190, height: 124), phase: phase, activity: store.activity))
             .renderingMode(.template).foregroundStyle(.white)
             .accessibilityLabel(store.text(store.state.isSleeping ? .sleepingPet : .awakePet))
         }
         VStack {
           HStack {
-            Text(store.text(store.state.isSleeping ? .resting : .wandering))
+            Text(store.text(store.activityLabel))
               .font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundStyle(.secondary)
             Spacer()
             Image(systemName: store.state.isSleeping ? "moon" : "circle.fill")
@@ -35,13 +35,6 @@ struct PetView: View {
           }
           Spacer()
         }.padding(15)
-        if let symbol = store.reaction {
-          Image(systemName: symbol).font(.system(size: 18)).offset(x: -70, y: -45).accessibilityHidden(true)
-        }
-        if store.state.isSleeping {
-          Text("z z Z").font(.system(size: 14, weight: .light, design: .rounded))
-            .foregroundStyle(.secondary).offset(x: -65, y: -43).accessibilityHidden(true)
-        }
       }.frame(height: 172)
 
       VStack(alignment: .leading, spacing: 7) {
